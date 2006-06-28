@@ -1,7 +1,5 @@
 #!/usr/bin/env perl
 
-use lib '/home/zev/bps/Test-Chimps-Anna/trunk/lib';
-
 use Test::Chimps::Anna;
 
 my $anna = Test::Chimps::Anna->new(
