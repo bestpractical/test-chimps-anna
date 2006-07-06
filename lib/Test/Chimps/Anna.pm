@@ -25,9 +25,10 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+Anna is a bot.
 
-Perhaps a little code snippet.
+Anna is an IRC bot, specifically, which watches for new Test::Chimps smoke 
+reports and talks to a specified channel when she sees one.
 
     use Test::Chimps::Anna;
 
