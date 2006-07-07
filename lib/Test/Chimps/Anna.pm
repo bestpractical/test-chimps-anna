@@ -4,10 +4,10 @@ use warnings;
 use strict;
 
 use Carp;
-use IO::Dir;
-use File::Spec;
-use YAML::Syck;
+use Jifty::DBI::Handle;
 use Test::Chimps::Report;
+use Test::Chimps::ReportCollection;
+use YAML::Syck;
 
 use base 'Bot::BasicBot';
 
@@ -40,26 +40,50 @@ reports and talks to a specified channel when she sees one.
 sub new {
   my $class = shift;
   my $self = $class->SUPER::new(@_);
-  my %args = @_;
-  if (! exists $args{report_dir}) {
-    croak "You must specify a report directory!";
-  }
-  $self->{report_dir} = $args{report_dir};
-  $self->{files_seen} = {};
-  $self->{first_run} = 1;
   $self = bless $self, $class;
-  $self->_scan_reports;
+  my %args = @_;
+  if (! exists $args{database_file}) {
+    croak "You must specify SQLite database file!";
+  }
+  if (exists $args{config_file}) {
+    my $columns = LoadFile($args{config_file});
+    foreach my $var (@$columns) {
+      package Test::Chimps::Report::Schema;
+      column($var, type(is('text')));
+    }
+  }
+  $self->{database_file} = $args{database_file};
+  
+  $self->{handle} = Jifty::DBI::Handle->new();
+  $self->{handle}->connect(driver => 'SQLite', database => $self->{database_file})
+    or die "Couldn't connect to database";
+
+  $self->{oid} = $self->_get_highest_oid;
+  $self->{first_run} = 1;
   return $self;
 }
 
-sub report_dir {
+sub _get_highest_oid {
   my $self = shift;
-  return $self->{report_dir};
+  
+  my $reports = Test::Chimps::ReportCollection->new(handle => $self->_handle);
+  $reports->columns(qw/id/);
+  $reports->unlimit;
+  $reports->order_by(column => 'id', order => 'DES');
+  $reports->rows_per_page(1);
+
+  my $report = $reports->next;
+  return $report->id;
 }
 
-sub _files_seen {
+sub _handle {
   my $self = shift;
-  return $self->{files_seen};
+  return $self->{handle};
+}
+
+sub _oid {
+  my $self = shift;
+  return $self->{oid};
 }
 
 sub tick {
@@ -69,29 +93,32 @@ sub tick {
     $self->_say_to_all("I'm going to ban so hard");
     $self->{first_run} = 0;
   }
-  
-  my @reports = $self->_scan_reports;
 
-  foreach my $reportfile (@reports) {
-    my $report = LoadFile($reportfile);
-    my $vars = $report->report_variables;
-    my $model = Test::TAP::Model::Visual->new_with_struct($report->model_structure);
-    if ($model->total_failed || $model->total_unexpectedly_succeeded) {
-      $reportfile =~ m{/([a-f0-9]+)\.yml$};
-      my $id = $1;
+  my $reports = Test::Chimps::ReportCollection->new(handle => $self->_handle);
+  $reports->limit(column => 'id', operator => '>', value => $self->_oid);
+  $reports->order_by(column => 'id');
+
+  while(my $report = $reports->next) {
+    if ($report->total_failed || $report->total_unexpectedly_succeeded) {
       my $msg =
-        "Smoke report for $vars->{project} r$vars->{revision} submitted: "
-        . sprintf( "%.2f", $model->total_ratio * 100 ) . "\%, "
-        . $model->total_seen . " total, "
-        . $model->total_ok . " ok, "
-        . $model->total_failed . " failed, "
-        . $model->total_todo . " todo, "
-        . $model->total_skipped . " skipped, "
-        . $model->total_unexpectedly_succeeded . " unexpectedly succeeded.  "
-        . $self->{server_script} . "?id=$id";
+        "Smoke report for " .  $report->project . " r" . $report->revision . " submitted: "
+        . sprintf( "%.2f", $report->total_ratio * 100 ) . "\%, "
+        . $report->total_seen . " total, "
+        . $report->total_ok . " ok, "
+        . $report->total_failed . " failed, "
+        . $report->total_todo . " todo, "
+        . $report->total_skipped . " skipped, "
+        . $report->total_unexpectedly_succeeded . " unexpectedly succeeded.  "
+        . $self->{server_script} . "?id=" . $report->id;
 
       $self->_say_to_all($msg);
     }
+  }
+
+  my $last = $reports->last;
+  if (defined $last) {
+    # we might already be at the highest oid
+    $self->{oid} = $last->id;
   }
   
   return 5;
@@ -103,23 +130,6 @@ sub _say_to_all {
 
   $self->say(channel => $_, body => $msg)
     for (@{$self->{channels}});
-}
-
-sub _scan_reports {
-  my $self = shift;
-
-  my $dir = $self->{report_dir};
-  my %new = ();
-  
-  my $d = IO::Dir->new($dir)
-    or die "Could not open report directory: $dir: $!";
-  while (defined(my $entry = $d->read)) {
-    if (! exists $self->_files_seen->{$entry}) {
-      $new{File::Spec->catfile($dir, $entry)}++;
-      $self->{files_seen}->{$entry}++;
-    }
-  }
-  return keys %new;
 }
 
 =head1 AUTHOR
