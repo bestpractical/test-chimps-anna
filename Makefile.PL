@@ -1,16 +1,17 @@
-use strict;
-use warnings;
-use ExtUtils::MakeMaker;
+use inc::Module::Install;
 
-WriteMakefile(
-    NAME                => 'Test::Chimps::Anna',
-    AUTHOR              => 'Zev Benjamin <zev@cpan.org>',
-    VERSION_FROM        => 'lib/Test/Chimps/Anna.pm',
-    ABSTRACT_FROM       => 'lib/Test/Chimps/Anna.pm',
-    PL_FILES            => {},
-    PREREQ_PM => {
-        'Test::More' => 0,
-    },
-    dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-    clean               => { FILES => 'Test-Chimps-Anna-*' },
-);
+# Define metadata
+name            'Test-Chimps-Anna';
+all_from        'lib/Test/Chimps/Anna.pm';
+
+# Specific dependencies
+requires('Bot::BasicBot');
+requires('Jifty::DBI::Handle');
+requires('Test::Chimps::Report');
+requires('Test::Chimps::ReportCollection');
+requires('YAML::Syck');
+
+build_requires('Test::Dependencies');
+
+auto_install;
+WriteAll;

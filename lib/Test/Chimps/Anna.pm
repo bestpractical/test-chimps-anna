@@ -13,27 +13,67 @@ use base 'Bot::BasicBot';
 
 =head1 NAME
 
-Test::Chimps::Anna - The great new Test::Chimps::Anna!
+Test::Chimps::Anna - An IRQ bot that announces test failures (and unexpected passes)
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
-Anna is a bot.
-
-Anna is an IRC bot, specifically, which watches for new Test::Chimps smoke 
-reports and talks to a specified channel when she sees one.
+Anna is a bot.  Specifically, she is an implementation of
+L<Bot::BasicBot>.  She will query your smoke report database and
+print smoke report summaries when tests fail or unexpectedly
+succeed.
 
     use Test::Chimps::Anna;
 
-    my $foo = Test::Chimps::Anna->new();
-    ...
+    my $anna = Test::Chimps::Anna->new(
+      server   => "irc.perl.org",
+      port     => "6667",
+      channels => ["#example"],
+    
+      nick      => "anna",
+      username  => "nice_girl",
+      name      => "Anna",
+      database_file => '/path/to/chimps/chimpsdb/database',
+      config_file => '/path/to/chimps/anna-config.yml',
+      server_script => 'http://example.com/cgi-bin/chimps-server.pl'
+      );
+    
+    $anna->run;
+
+=head1 METHODS
+
+=head2 new ARGS
+
+ARGS is a hash who's keys are mostly passed through to
+L<Bot::BasicBot>.  Keys which are recognized beyond the ones from
+C<Bot::BasicBot> are as follows:
+
+=over 4
+
+=item * database_file
+
+Mandatory.  The SQLite database Anna should connect to get smoke
+report data.
+
+=item * server_script
+
+Mandatory.  The URL of the server script.  This is used to display
+URLs to the full smoke report.
+
+=item * config_file
+
+If your server accepts report variables, you must specify a config
+file.  The config file is a YAML dump of an array containing the
+names of those variables.  Yes, this is a hack.
+
+=back
 
 =cut
 
@@ -85,6 +125,14 @@ sub _oid {
   my $self = shift;
   return $self->{oid};
 }
+
+=head2 tick
+
+Overrided method.  Checks for new smoke reports every 2 minutes and
+prints summaries if there were failed tests or if tests
+unexpectedly succeeded.
+
+=cut
 
 sub tick {
   my $self = shift;
@@ -174,13 +222,13 @@ L<http://search.cpan.org/dist/Test-Chimps-Anna>
 
 =head1 ACKNOWLEDGEMENTS
 
-=head1 COPYRIGHT & LICENSE
+=head2 COPYRIGHT & LICENSE
 
-Copyright 2006 Zev Benjamin, all rights reserved.
+Copyright 2006 Best Practical Solutions, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
 =cut
 
-1; # End of Test::Chimps::Anna
+1;

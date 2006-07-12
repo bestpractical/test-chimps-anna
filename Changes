@@ -1,5 +1,7 @@
 Revision history for Test-Chimps-Anna
 
-0.01    Date/time
-        First version, released on an unsuspecting world.
+0.01    Thu Jun 22 15:37:00 EDT 2006
+        Initial release 
 
+0.02    Wed Jul 12 17:07:57 EDT 2006
+        Initial CPAN release, now with documentation.
