@@ -220,11 +220,9 @@ L<http://search.cpan.org/dist/Test-Chimps-Anna>
 
 =back
 
-=head1 ACKNOWLEDGEMENTS
+=head1 COPYRIGHT & LICENSE
 
-=head2 COPYRIGHT & LICENSE
-
-Copyright 2006 Best Practical Solutions, all rights reserved.
+Copyright 2006 Best Practical Solutions.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
