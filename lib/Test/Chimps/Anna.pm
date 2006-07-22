@@ -17,11 +17,11 @@ Test::Chimps::Anna - An IRQ bot that announces test failures (and unexpected pas
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
@@ -100,6 +100,7 @@ sub new {
 
   $self->{oid} = $self->_get_highest_oid;
   $self->{first_run} = 1;
+  $self->{passing_projects} = {};
   return $self;
 }
 
@@ -148,6 +149,7 @@ sub tick {
 
   while(my $report = $reports->next) {
     if ($report->total_failed || $report->total_unexpectedly_succeeded) {
+      $self->{passing_projects}->{$report->project} = 0;
       my $msg =
         "Smoke report for " .  $report->project . " r" . $report->revision . " submitted: "
         . sprintf( "%.2f", $report->total_ratio * 100 ) . "\%, "
@@ -160,6 +162,18 @@ sub tick {
         . $self->{server_script} . "?id=" . $report->id;
 
       $self->_say_to_all($msg);
+    } else {
+      if (! exists $self->{passing_projects}->{$report->project}) {
+        # don't announce if we've never seen this project before
+        $self->{passing_projects}->{$report->project} = 1;
+      }
+      next if $self->{passing_projects}->{$report->project};
+      $self->{passing_projects}->{$report->project} = 1;
+      
+      $self->{passing_projects}->{$report->project}++;
+      $self->_say_to_all("Smoke report for " .  $report->project
+                         . " r" . $report->revision . " submitted: "
+                         . "all " . $report->total_ok . " tests pass");
     }
   }
 
