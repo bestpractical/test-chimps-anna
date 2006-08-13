@@ -13,12 +13,11 @@ inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
 lib/Test/Chimps/Anna.pm
 Makefile.PL
-MANIFEST
-META.yml			# Will be created by "make dist"
+MANIFEST			This list of files
+META.yml
 README
 t/00-dependencies.t
 t/00-load.t
 t/boilerplate.t
 t/pod-coverage.t
 t/pod.t
-Test-Chimps-Anna/.cvsignore
