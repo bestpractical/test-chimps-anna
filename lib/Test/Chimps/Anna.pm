@@ -73,6 +73,11 @@ If your server accepts report variables, you must specify a config
 file.  The config file is a YAML dump of an array containing the
 names of those variables.  Yes, this is a hack.
 
+=item * notices
+
+If you want Anna to use /NOTICE instead of /SAY when sending updates,
+provide a true value for this; defaults to false.
+
 =back
 
 =cut
@@ -92,6 +97,7 @@ sub new {
       column($var, type(is('text')));
     }
   }
+  $self->{notices} = $args{notices};
   $self->{database_file} = $args{database_file};
   
   $self->{handle} = Jifty::DBI::Handle->new();
@@ -190,8 +196,13 @@ sub _say_to_all {
   my $self = shift;
   my $msg = shift;
 
-  $self->say(channel => $_, body => $msg)
-    for (@{$self->{channels}});
+  if ($self->{notices}) {
+      $self->notice($_, $msg)
+        for (@{$self->{channels}});
+  } else {
+      $self->say(channel => $_, body => $msg)
+        for (@{$self->{channels}});
+  }
 }
 
 =head1 AUTHOR
