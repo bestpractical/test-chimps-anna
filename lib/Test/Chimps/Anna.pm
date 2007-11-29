@@ -93,8 +93,11 @@ sub new {
   if (exists $args{config_file}) {
     my $columns = LoadFile($args{config_file});
     foreach my $var (@$columns) {
-      package Test::Chimps::Report::Schema;
-      column($var, type(is('text')));
+      my $column = Test::Chimps::Report->add_column($var);
+      $column->type("text");
+      $column->writable(1);
+      $column->readable(1);
+      Test::Chimps::Report->_init_methods_for_column($column);
     }
   }
   $self->{notices} = $args{notices};

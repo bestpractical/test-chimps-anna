@@ -13,8 +13,8 @@ my $anna = Test::Chimps::Anna->new(
   nick      => "anna",
   username  => "nice_girl",
   name      => "Anna",
-  database_file => '/home/chimps/database',
-  config_file => '/home/chimps/anna-config.yml',
+  database_file => '/home/chmrr/work/bps/Test-Chimps-Anna/database',
+  config_file => '/home/chmrr/work/bps/Test-Chimps-Anna/anna-config.yml',
   server_script => 'http://smoke.bestpractical.com/cgi-bin/report_server.pl'
   );
 
