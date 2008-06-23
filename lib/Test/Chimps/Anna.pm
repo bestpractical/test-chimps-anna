@@ -87,9 +87,6 @@ sub new {
   my $self = $class->SUPER::new(@_);
   $self = bless $self, $class;
   my %args = @_;
-  if (! exists $args{database_file}) {
-    croak "You must specify SQLite database file!";
-  }
   if (exists $args{config_file}) {
     my $columns = LoadFile($args{config_file});
     foreach my $var (@$columns) {
@@ -101,13 +98,14 @@ sub new {
     }
   }
   $self->{notices} = $args{notices};
-  $self->{database_file} = $args{database_file};
-  
-  $self->{handle} = Jifty::DBI::Handle->new();
-  $self->{handle}->connect(driver => 'SQLite', database => $self->{database_file})
-    or die "Couldn't connect to database";
 
-  $self->{oid} = $self->_get_highest_oid;
+  $self->{handle} = Jifty::DBI::Handle->new();
+  $self->{handle}->connect(driver => $args{database_driver} || "Pg",
+                           database => $args{database} || "smoke",
+                           user => $args{database_user} || "postgres",
+                           password => $args{database_password} || "");
+
+  $self->{oid} = $ENV{LATEST} || $self->_get_highest_oid;
   $self->{first_run} = 1;
   $self->{passing_projects} = {};
   return $self;
@@ -119,7 +117,7 @@ sub _get_highest_oid {
   my $reports = Test::Chimps::ReportCollection->new(handle => $self->_handle);
   $reports->columns(qw/id/);
   $reports->unlimit;
-  $reports->order_by(column => 'id', order => 'DES');
+  $reports->order_by(column => 'id', order => 'DESC');
   $reports->rows_per_page(1);
 
   my $report = $reports->next;
@@ -167,7 +165,8 @@ sub tick {
         . $report->total_failed . " failed, "
         . $report->total_todo . " todo, "
         . $report->total_skipped . " skipped, "
-        . $report->total_unexpectedly_succeeded . " unexpectedly succeeded.  "
+        . $report->total_unexpectedly_succeeded . " unexpectedly succeeded; "
+        . $report->duration . " seconds.  "
         . $self->{server_script} . "?id=" . $report->id;
 
       $self->_say_to_all($msg);
@@ -181,8 +180,9 @@ sub tick {
       
       $self->{passing_projects}->{$report->project}++;
       $self->_say_to_all("Smoke report for " .  $report->project
-                         . " r" . $report->revision . " submitted: "
-                         . "all " . $report->total_ok . " tests pass");
+                         . " r" . $report->revision . " submitted; "
+                         . $report->duration . " seconds.  "
+                         . "All " . $report->total_ok . " tests pass");
     }
   }
 
