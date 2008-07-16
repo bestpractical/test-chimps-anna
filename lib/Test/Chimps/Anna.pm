@@ -13,7 +13,7 @@ use base 'Bot::BasicBot';
 
 =head1 NAME
 
-Test::Chimps::Anna - An IRQ bot that announces test failures (and unexpected passes)
+Test::Chimps::Anna - An IRC bot that announces test failures (and unexpected passes)
 
 =head1 VERSION
 
@@ -36,7 +36,7 @@ succeed.
       server   => "irc.perl.org",
       port     => "6667",
       channels => ["#example"],
-    
+
       nick      => "anna",
       username  => "nice_girl",
       name      => "Anna",
@@ -44,7 +44,7 @@ succeed.
       config_file => '/path/to/chimps/anna-config.yml',
       server_script => 'http://example.com/cgi-bin/chimps-server.pl'
       );
-    
+
     $anna->run;
 
 =head1 METHODS
@@ -113,7 +113,7 @@ sub new {
 
 sub _get_highest_oid {
   my $self = shift;
-  
+
   my $reports = Test::Chimps::ReportCollection->new(handle => $self->_handle);
   $reports->columns(qw/id/);
   $reports->unlimit;
@@ -175,14 +175,15 @@ sub tick {
         # don't announce if we've never seen this project before
         $self->{passing_projects}->{$report->project} = 1;
       }
-      next if $self->{passing_projects}->{$report->project};
-      $self->{passing_projects}->{$report->project} = 1;
-      
-      $self->{passing_projects}->{$report->project}++;
-      $self->_say_to_all("Smoke report for " .  $report->project
-                         . " r" . $report->revision . " submitted by ".$report->committer."; "
-                         . $report->duration . " seconds.  "
-                         . "All " . $report->total_ok . " tests pass");
+      if (    $self->{passing_projects}->{$report->project}++
+          and $self->{passing_projects}->{$report->project} % 10 == 0) {
+        $self->_say_to_all( $report->project . " still passing all " . $report->total_ok . " tests.  Woo!");
+      } else {
+        $self->_say_to_all("Smoke report for " .  $report->project
+                           . " r" . $report->revision . " submitted by ".$report->committer."; "
+                           . $report->duration . " seconds.  "
+                           . "All " . $report->total_ok . " tests pass");
+      }
     }
   }
 
@@ -191,10 +192,10 @@ sub tick {
     # we might already be at the highest oid
     $self->{oid} = $last->id;
   }
-  
+
   return 5;
 }
-  
+
 sub _say_to_all {
   my $self = shift;
   my $msg = shift;
