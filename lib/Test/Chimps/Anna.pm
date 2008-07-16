@@ -158,7 +158,7 @@ sub tick {
     if ($report->total_failed || $report->total_unexpectedly_succeeded) {
       $self->{passing_projects}->{$report->project} = 0;
       my $msg =
-        "Smoke report for " .  $report->project . " r" . $report->revision . " submitted: "
+        "Smoke report for " .  $report->project . " r" . $report->revision . " by ".$report->committer." submitted: "
         . sprintf( "%.2f", $report->total_ratio * 100 ) . "\%, "
         . $report->total_seen . " total, "
         . $report->total_ok . " ok, "
@@ -180,7 +180,7 @@ sub tick {
       
       $self->{passing_projects}->{$report->project}++;
       $self->_say_to_all("Smoke report for " .  $report->project
-                         . " r" . $report->revision . " submitted; "
+                         . " r" . $report->revision . " submitted by ".$report->committer."; "
                          . $report->duration . " seconds.  "
                          . "All " . $report->total_ok . " tests pass");
     }
