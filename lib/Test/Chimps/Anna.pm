@@ -175,9 +175,10 @@ sub tick {
         # don't announce if we've never seen this project before
         $self->{passing_projects}->{$report->project} = 1;
       }
-      if (    $self->{passing_projects}->{$report->project}++
-          and $self->{passing_projects}->{$report->project} % 10 == 0) {
-        $self->_say_to_all( $report->project . " still passing all " . $report->total_ok . " tests.  Woo!");
+      if ( $self->{passing_projects}->{$report->project}++) {
+        if ($self->{passing_projects}->{$report->project} % 5 == 0) {
+            $self->_say_to_all( $report->project . " still passing all " . $report->total_ok . " tests.  Woo!");
+        }
       } else {
         $self->_say_to_all("Smoke report for " .  $report->project
                            . " r" . $report->revision . " submitted by ".$report->committer."; "
