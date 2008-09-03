@@ -161,7 +161,7 @@ sub tick {
         "Smoke report for " .  $report->project . " r" . $report->revision . " by ".$report->committer." submitted: "
         . sprintf( "%.2f", $report->total_ratio * 100 ) . "\%, "
         . $report->total_seen . " total, "
-        . $report->total_ok . " ok, "
+        . $report->total_passed . " ok, "
         . $report->total_failed . " failed, "
         . $report->total_todo . " todo, "
         . $report->total_skipped . " skipped, "
@@ -178,13 +178,13 @@ sub tick {
       if ( $self->{passing_projects}->{$report->project}++) {
         my @exclam = (qw/Yatta Woo Whee Yay Yippee Yow/, "Happy happy joy joy");
         if ($self->{passing_projects}->{$report->project} % 5 == 0) {
-            $self->_say_to_all( $report->project . " r" . $report->revision . " still passing all " . $report->total_ok . " tests.  " . $exclam[rand @exclam] . "!");
+            $self->_say_to_all( $report->project . " r" . $report->revision . " still passing all " . $report->total_passed . " tests.  " . $exclam[rand @exclam] . "!");
         }
       } else {
         $self->_say_to_all("Smoke report for " .  $report->project
                            . " r" . $report->revision . " submitted by ".$report->committer."; "
                            . $report->duration . " seconds.  "
-                           . "All " . $report->total_ok . " tests pass");
+                           . "All " . $report->total_passed . " tests pass");
       }
     }
   }
