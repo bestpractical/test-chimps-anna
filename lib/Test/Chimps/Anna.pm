@@ -176,7 +176,7 @@ sub tick {
         $self->{passing_projects}->{$report->project} = 1;
       }
       if ( $self->{passing_projects}->{$report->project}++) {
-        my @exclam = (qw/Yatta Woo Whee Yay Yippee Yow/, "Happy happy joy joy", "O frabjous day!");
+        my @exclam = (qw/Yatta Woo Whee Yay Yippee Yow/, "Happy happy joy joy", "O frabjous day");
         if ($self->{passing_projects}->{$report->project} % 5 == 0) {
             $self->_say_to_all( $report->project . " rev " . $report->revision . " still passing all " . $report->total_passed . " tests.  " . $exclam[rand @exclam] . "!");
         }
