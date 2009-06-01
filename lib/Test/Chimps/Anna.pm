@@ -158,7 +158,7 @@ sub tick {
     if ($report->total_failed || $report->total_unexpectedly_succeeded) {
       $self->{passing_projects}->{$report->project} = 0;
       my $msg =
-        $report->project ." rev ". $report->revision ." by ". $report->committer .": "
+        $report->project ." ". $report->revision ." by ". $report->committer .": "
         . sprintf( "%.2f", $report->total_ratio * 100 ) . "\%, "
         . $report->total_seen . " total, "
         . $report->total_passed . " ok, "
@@ -166,7 +166,7 @@ sub tick {
         . $report->total_todo . " todo, "
         . $report->total_skipped . " skipped, "
         . $report->total_unexpectedly_succeeded . " unexpectedly succeeded; "
-        . $report->duration . " seconds.  "
+        . $report->duration . "s.  "
         . $self->{server_script} . "?id=" . $report->id;
 
       $self->_say_to_all($msg);
