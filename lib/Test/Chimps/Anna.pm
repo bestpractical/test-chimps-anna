@@ -158,7 +158,10 @@ sub tick {
     if ($report->total_failed || $report->total_unexpectedly_succeeded) {
       $self->{passing_projects}->{$report->project} = 0;
       my $msg =
-        $report->project ." ". $report->revision ." by ". $report->committer .": "
+        $report->project ." ". $report->revision ." by ". $report->committer .
+        ($report->can('committed_date') ? ( ' at ' . $report->committed_date )
+        : '')
+        . ": "
         . sprintf( "%.2f", $report->total_ratio * 100 ) . "\%, "
         . $report->total_seen . " total, "
         . $report->total_passed . " ok, "
