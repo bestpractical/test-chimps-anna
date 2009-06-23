@@ -181,13 +181,35 @@ sub tick {
       if ( $self->{passing_projects}->{$report->project}++) {
         my @exclam = (qw/Yatta Woo Whee Yay Yippee Yow/, "Happy happy joy joy", "O frabjous day");
         if ($self->{passing_projects}->{$report->project} % 5 == 0) {
-            $self->_say_to_all( $report->project . " rev " . $report->revision . " still passing all " . $report->total_passed . " tests.  " . $exclam[rand @exclam] . "!");
+            $self->_say_to_all(
+                    $report->project . " rev " 
+                  . $report->revision
+                  . (
+                      $report->can('committed_date')
+                    ? ( '(' . $report->committed_date  . ')' )
+                    : ''
+                  )
+                  . " still passing all "
+                  . $report->total_passed
+                  . " tests.  "
+                  . $exclam[ rand @exclam ] . "!"
+            );
         }
       } else {
         $self->_say_to_all(
-            $report->project ." rev ". $report->revision ." by ". $report->committer."; "
-                           . $report->duration . " seconds.  "
-                           . "All " . $report->total_passed . " tests pass"
+                $report->project . " rev "
+              . $report->revision . " by "
+              . $report->committer
+              . (
+                $report->can('committed_date')
+                ? ( ' at ' . $report->committed_date )
+                : ''
+              )
+              . "; "
+              . $report->duration
+              . " seconds.  " . "All "
+              . $report->total_passed
+              . " tests pass"
         );
       }
     }
