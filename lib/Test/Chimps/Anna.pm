@@ -260,7 +260,7 @@ sub preprocess_report_metadata {
     my $report    = shift;
     my $rev       = substr( $report->revision, 0, 6 );
     my $committer = $report->committer;
-    $committer =~ s/^(?:.*)<(.*)>(?:.*)/$1/g;
+    $committer =~ s/^(.*)<(.*)>(?:.*)/$1/g;
     my $date;
     if ( $report->can('committed_date') ) {
         my $dt = $self->string_to_datetime( $report->committed_date );
