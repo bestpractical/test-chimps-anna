@@ -217,7 +217,7 @@ sub tick {
                         . $committer
                         . (
                         $report->can('committed_date')
-                        ? ( .' ' .$date )
+                        ? ( ' ' .$date )
                         : ''
                         )
                         . "; "
