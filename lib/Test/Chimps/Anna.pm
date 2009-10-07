@@ -168,6 +168,7 @@ sub tick {
                 = $report->project . " " 
                 . $rev . " by "
                 . $committer
+                . " "
                 . $date . ": "
                 . sprintf( "%.2f", $report->total_ratio * 100 ) . "\%, "
                 . $report->total_seen
