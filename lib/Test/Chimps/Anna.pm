@@ -198,7 +198,7 @@ sub tick {
                 if ( $self->{passing_projects}->{ $report->project } % 5 == 0 ) {
                     $self->_say_to_all(
                               $report->project . " rev " 
-                            . $rev,
+                            . $rev
                             . (
                             ? ( '(' . $date. ')' )
                             : ''
@@ -254,17 +254,19 @@ sub _say_to_all {
 }
 
 sub preprocess_report_metadata {
-	my $self = shift;
-	my $report = shift;
-            my $rev = substr( $report->revision, 0, 6 );
-            my $committer = $report->committer;
-            $committer =~ s/^(?:.*)<(.*)>(?:.*)/$1/g;
-            my $date;
-            if ( $report->can('committed_date') ) {
-                $dt   = $self->string_to_datetime( $report->committed_date );
-                $date = $self->age_as_string( time() - $dt->epoch );
-            }
-	return ($rev,$committer,$date);
+    my $self   = shift;
+    my $report = shift;
+    my $rev = substr( $report->revision, 0, 6 );
+    my $committer = $report->committer;
+    $committer =~ s/^(?:.*)<(.*)>(?:.*)/$1/g;
+    my $date;
+    if ( $report->can('committed_date') ) {
+        my $dt   = $self->string_to_datetime( $report->committed_date );
+		if ($dt) {
+			$date = $self->age_as_string( time() - $dt->epoch );
+		}
+    }
+    return ( $rev, $committer, $date );
 }
 
 
