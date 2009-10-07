@@ -85,55 +85,57 @@ provide a true value for this; defaults to false.
 =cut
 
 sub new {
-  my $class = shift;
-  my $self = $class->SUPER::new(@_);
-  $self = bless $self, $class;
-  my %args = @_;
-  if (exists $args{config_file}) {
-    my $columns = LoadFile($args{config_file});
-    foreach my $var (@$columns) {
-      my $column = Test::Chimps::Report->add_column($var);
-      $column->type("text");
-      $column->writable(1);
-      $column->readable(1);
-      Test::Chimps::Report->_init_methods_for_column($column);
+    my $class = shift;
+    my $self  = $class->SUPER::new(@_);
+    $self = bless $self, $class;
+    my %args = @_;
+    if ( exists $args{config_file} ) {
+        my $columns = LoadFile( $args{config_file} );
+        foreach my $var (@$columns) {
+            my $column = Test::Chimps::Report->add_column($var);
+            $column->type("text");
+            $column->writable(1);
+            $column->readable(1);
+            Test::Chimps::Report->_init_methods_for_column($column);
+        }
     }
-  }
-  $self->{notices} = $args{notices};
+    $self->{notices} = $args{notices};
 
-  $self->{handle} = Jifty::DBI::Handle->new();
-  $self->{handle}->connect(driver => $args{database_driver} || "Pg",
-                           database => $args{database} || "smoke",
-                           user => $args{database_user} || "postgres",
-                           password => $args{database_password} || "");
+    $self->{handle} = Jifty::DBI::Handle->new();
+    $self->{handle}->connect(
+        driver   => $args{database_driver}   || "Pg",
+        database => $args{database}          || "smoke",
+        user     => $args{database_user}     || "postgres",
+        password => $args{database_password} || ""
+    );
 
-  $self->{oid} = $ENV{LATEST} || $self->_get_highest_oid;
-  $self->{first_run} = 1;
-  $self->{passing_projects} = {};
-  return $self;
+    $self->{oid}              = $ENV{LATEST} || $self->_get_highest_oid;
+    $self->{first_run}        = 1;
+    $self->{passing_projects} = {};
+    return $self;
 }
 
 sub _get_highest_oid {
-  my $self = shift;
+    my $self = shift;
 
-  my $reports = Test::Chimps::ReportCollection->new(handle => $self->_handle);
-  $reports->columns(qw/id/);
-  $reports->unlimit;
-  $reports->order_by(column => 'id', order => 'DESC');
-  $reports->rows_per_page(1);
+    my $reports = Test::Chimps::ReportCollection->new( handle => $self->_handle );
+    $reports->columns(qw/id/);
+    $reports->unlimit;
+    $reports->order_by( column => 'id', order => 'DESC' );
+    $reports->rows_per_page(1);
 
-  my $report = $reports->next;
-  return $report->id;
+    my $report = $reports->next;
+    return $report->id;
 }
 
 sub _handle {
-  my $self = shift;
-  return $self->{handle};
+    my $self = shift;
+    return $self->{handle};
 }
 
 sub _oid {
-  my $self = shift;
-  return $self->{oid};
+    my $self = shift;
+    return $self->{oid};
 }
 
 =head2 tick
@@ -160,13 +162,13 @@ sub tick {
         if ( $report->total_failed || $report->total_unexpectedly_succeeded ) {
             $self->{passing_projects}->{ $report->project } = 0;
 
-			my ($rev,$committer, $date) = $self->preprocess_report_metadata($report);
+            my ( $rev, $committer, $date ) = $self->preprocess_report_metadata($report);
 
             my $msg
                 = $report->project . " " 
                 . $rev . " by "
                 . $committer
-                . ( $date ? $date : '' ) . ": "
+                . $date . ": "
                 . sprintf( "%.2f", $report->total_ratio * 100 ) . "\%, "
                 . $report->total_seen
                 . " total, "
@@ -193,14 +195,14 @@ sub tick {
             if ( $self->{passing_projects}->{ $report->project }++ ) {
                 my @exclam = ( qw/Yatta Woo Whee Yay Yippee Yow/, "Happy happy joy joy", "O frabjous day" );
 
-
-				my ($rev,$committer, $date) = $self->preprocess_report_metadata($report);
+                my ( $rev, $committer, $date ) = $self->preprocess_report_metadata($report);
                 if ( $self->{passing_projects}->{ $report->project } % 5 == 0 ) {
                     $self->_say_to_all(
                               $report->project . " rev " 
                             . $rev
                             . (
-                            ? ( '(' . $date. ')' )
+                            $date
+                            ? ( '(' . $date . ')' )
                             : ''
                             )
                             . " still passing all "
@@ -210,22 +212,14 @@ sub tick {
                     );
                 }
             } else {
-				my ($rev,$committer, $date) = $self->preprocess_report_metadata($report);
-                $self->_say_to_all(
-                          $report->project . " rev " 
-                        . $rev . " by " 
+                my ( $rev, $committer, $date ) = $self->preprocess_report_metadata($report);
+                $self->_say_to_all( $report->project . " rev " 
+                        . $rev . " by "
                         . $committer
-                        . (
-                        $report->can('committed_date')
-                        ? ( ' ' .$date )
-                        : ''
-                        )
-                        . "; "
-                        . $report->duration
-                        . "s.  " . "All "
+                        . ( $report->can('committed_date') ? ' ' . $date : '' ) . "; "
+                        . $report->duration . "s.  " . "All "
                         . $report->total_passed
-                        . " tests pass"
-                );
+                        . " tests pass" );
             }
         }
     }
@@ -241,38 +235,46 @@ sub tick {
 }
 
 sub _say_to_all {
-  my $self = shift;
-  my $msg = shift;
+    my $self = shift;
+    my $msg  = shift;
 
-  if ($self->{notices}) {
-      $self->notice($_, $msg)
-        for (@{$self->{channels}});
-  } else {
-      $self->say(channel => $_, body => $msg)
-        for (@{$self->{channels}});
-  }
+    if ( $self->{notices} ) {
+        $self->notice( $_, $msg ) for ( @{ $self->{channels} } );
+    } else {
+        $self->say( channel => $_, body => $msg ) for ( @{ $self->{channels} } );
+    }
 }
 
 sub preprocess_report_metadata {
-    my $self   = shift;
-    my $report = shift;
-    my $rev = substr( $report->revision, 0, 6 );
+    my $self      = shift;
+    my $report    = shift;
+    my $rev       = substr( $report->revision, 0, 6 );
     my $committer = $report->committer;
     $committer =~ s/^(?:.*)<(.*)>(?:.*)/$1/g;
     my $date;
     if ( $report->can('committed_date') ) {
-        my $dt   = $self->string_to_datetime( $report->committed_date );
-		if ($dt) {
-			$date = $self->age_as_string( time() - $dt->epoch );
-		}
+        my $dt = $self->string_to_datetime( $report->committed_date );
+        if ($dt) {
+            $date = $self->age_as_string( time() - $dt->epoch );
+        }
     }
     return ( $rev, $committer, $date );
 }
 
-
-
-my %MONTHS = ( jan => 1, feb => 2, mar => 3, apr => 4, may => 5, jun => 6, jul => 7, aug => 8, sep => 9, oct => 10, nov => 11, dec => 12);
-
+my %MONTHS = (
+    jan => 1,
+    feb => 2,
+    mar => 3,
+    apr => 4,
+    may => 5,
+    jun => 6,
+    jul => 7,
+    aug => 8,
+    sep => 9,
+    oct => 10,
+    nov => 11,
+    dec => 12
+);
 
 use vars qw($MINUTE $HOUR $DAY $WEEK $MONTH $YEAR);
 
@@ -284,23 +286,25 @@ $MONTH  = 30.4375 * $DAY;
 $YEAR   = 365.25 * $DAY;
 
 sub string_to_datetime {
-	my $self = shift;
-    my ($date)= validate_pos(@_, { type => SCALAR | UNDEF} );
-    if ($date =~ /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2}):(\d{2})Z?$/ ){
-        my ($year,$month,$day, $hour,$min,$sec) = ($1,$2,$3,$4,$5,$6);
-        my $dt = DateTime->new( year => $year,
-                                month => $month,
-                                day => $day,
-                                hour => $hour,
-                                minute => $min,
-                                second => $sec,
-                                time_zone => 'GMT');
+    my $self = shift;
+    my ($date) = validate_pos( @_, { type => SCALAR | UNDEF } );
+    if ( $date =~ /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2}):(\d{2})Z?$/ ) {
+        my ( $year, $month, $day, $hour, $min, $sec ) = ( $1, $2, $3, $4, $5, $6 );
+        my $dt = DateTime->new(
+            year      => $year,
+            month     => $month,
+            day       => $day,
+            hour      => $hour,
+            minute    => $min,
+            second    => $sec,
+            time_zone => 'GMT'
+        );
         return $dt;
     }
     if ( $date =~ m!^(\d{4})/(\d{2})/(\d{2}) (\d{2}):(\d{2}):(\d{2}) ([-+]?\d{4})?! ) {
+
         # e.g. 2009/03/21 10:03:05 -0700
-        my ( $year, $month, $day, $hour, $min, $sec, $tz ) =
-          ( $1, $2, $3, $4, $5, $6, $7 );
+        my ( $year, $month, $day, $hour, $min, $sec, $tz ) = ( $1, $2, $3, $4, $5, $6, $7 );
         my $dt = DateTime->new(
             year      => $year,
             month     => $month,
@@ -310,43 +314,39 @@ sub string_to_datetime {
             second    => $sec,
             time_zone => $tz || 'GMT'
         );
-        $dt->set_time_zone( 'GMT' );
+        $dt->set_time_zone('GMT');
         return $dt;
     }
- 
-	if ($date =~ /^(\w{3}) (\w{3}) (\d+) (\d\d):(\d\d):(\d\d) (\d{4}) ([+-]?\d{4})$/) {
-        my ( $wday, $mon, $day, $hour, $min, $sec, $year, $tz) = 
-          ( $1, $2, $3, $4, $5, $6, $7, $8 );
+
+    if ( $date =~ /^(\w{3}) (\w{3}) (\d+) (\d\d):(\d\d):(\d\d) (\d{4}) ([+-]?\d{4})$/ ) {
+        my ( $wday, $mon, $day, $hour, $min, $sec, $year, $tz ) = ( $1, $2, $3, $4, $5, $6, $7, $8 );
         my $dt = DateTime->new(
             year      => $year,
-            month     => $MONTHS{lc($mon)},
+            month     => $MONTHS{ lc($mon) },
             day       => $day,
             hour      => $hour,
             minute    => $min,
             second    => $sec,
             time_zone => $tz || 'GMT'
         );
-        $dt->set_time_zone( 'GMT' );
+        $dt->set_time_zone('GMT');
         return $dt;
 
-	}
+    }
 
-
-
-	if ($date) {
+    if ($date) {
         require DateTime::Format::Natural;
+
         # XXX DO we want floating or GMT?
-        my $parser = DateTime::Format::Natural->new(time_zone => 'floating');
+        my $parser = DateTime::Format::Natural->new( time_zone => 'floating' );
         my $dt = $parser->parse_datetime($date);
-        if ($parser->success) {
+        if ( $parser->success ) {
             return $dt;
-        } 
+        }
     }
 
     return undef;
 }
-
-
 
 sub age_as_string {
     my $self     = shift;
@@ -357,36 +357,28 @@ sub age_as_string {
     if ( $duration < $MINUTE ) {
         $s         = $duration;
         $time_unit = "sec";
-    }
-    elsif ( $duration < ( 2 * $HOUR ) ) {
+    } elsif ( $duration < ( 2 * $HOUR ) ) {
         $s         = int( $duration / $MINUTE + 0.5 );
         $time_unit = "min";
-    }
-    elsif ( $duration < ( 2 * $DAY ) ) {
+    } elsif ( $duration < ( 2 * $DAY ) ) {
         $s         = int( $duration / $HOUR + 0.5 );
         $time_unit = "hours";
-    }
-    elsif ( $duration < ( 2 * $WEEK ) ) {
+    } elsif ( $duration < ( 2 * $WEEK ) ) {
         $s         = int( $duration / $DAY + 0.5 );
         $time_unit = "days";
-    }
-    elsif ( $duration < ( 2 * $MONTH ) ) {
+    } elsif ( $duration < ( 2 * $MONTH ) ) {
         $s         = int( $duration / $WEEK + 0.5 );
         $time_unit = "weeks";
-    }
-    elsif ( $duration < $YEAR ) {
+    } elsif ( $duration < $YEAR ) {
         $s         = int( $duration / $MONTH + 0.5 );
         $time_unit = "months";
-    }
-    else {
+    } else {
         $s         = int( $duration / $YEAR + 0.5 );
         $time_unit = "years";
     }
 
-    return  "$s $time_unit ago", $s, $time_unit );
+    return "$s $time_unit ago";
 }
-
-
 
 =head1 AUTHOR
 
