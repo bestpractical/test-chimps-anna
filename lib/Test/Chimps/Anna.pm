@@ -159,13 +159,22 @@ sub tick {
     $reports->order_by( column => 'id' );
 
     while ( my $report = $reports->next ) {
+        # specify long test durations as minutes
+        my $duration;
+        if ($report->duration > 120) {
+            $duration = int($report->duration / 60) . 'm';
+        }
+        else {
+            $duration = $report->duration . 's';
+        }
+
         if ( $report->total_failed || $report->total_unexpectedly_succeeded ) {
             $self->{passing_projects}->{ $report->project } = 0;
 
             my ( $rev, $committer, $date ) = $self->preprocess_report_metadata($report);
 
             my $msg
-                = $report->project . " " 
+                = $report->project . " "
                 . $rev . " by "
                 . $committer
                 . " "
@@ -182,7 +191,7 @@ sub tick {
                 . " skipped, "
                 . $report->total_unexpectedly_succeeded
                 . " unexpectedly ok; "
-                . $report->duration . "s.  "
+                . $duration . ".  "
                 . $self->{server_script} . "?id="
                 . $report->id;
 
@@ -218,7 +227,7 @@ sub tick {
                         . $rev . " by "
                         . $committer
                         . ( $report->can('committed_date') ? ' ' . $date : '' ) . "; "
-                        . $report->duration . "s.  " . "All "
+                        . $duration . ".  " . "All "
                         . $report->total_passed
                         . " tests pass" );
             }
