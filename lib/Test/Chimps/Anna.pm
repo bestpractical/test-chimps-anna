@@ -4,6 +4,8 @@ use warnings;
 use strict;
 
 use Carp;
+use DateTime;
+use Params::Validate;
 use Jifty::DBI::Handle;
 use Test::Chimps::Report;
 use Test::Chimps::ReportCollection;
@@ -143,85 +145,99 @@ unexpectedly succeeded.
 =cut
 
 sub tick {
-  my $self = shift;
+    my $self = shift;
 
-  if ($self->{first_run}) {
-    $self->_say_to_all("I'm going to ban so hard");
-    $self->{first_run} = 0;
-  }
-
-  my $reports = Test::Chimps::ReportCollection->new(handle => $self->_handle);
-  $reports->limit(column => 'id', operator => '>', value => $self->_oid);
-  $reports->order_by(column => 'id');
-
-  while(my $report = $reports->next) {
-    if ($report->total_failed || $report->total_unexpectedly_succeeded) {
-      $self->{passing_projects}->{$report->project} = 0;
-      my $msg =
-        $report->project ." ". $report->revision ." by ". $report->committer .
-        ($report->can('committed_date') ? ( ' at ' . $report->committed_date )
-        : '')
-        . ": "
-        . sprintf( "%.2f", $report->total_ratio * 100 ) . "\%, "
-        . $report->total_seen . " total, "
-        . $report->total_passed . " ok, "
-        . $report->total_failed . " failed, "
-        . $report->total_todo . " todo, "
-        . $report->total_skipped . " skipped, "
-        . $report->total_unexpectedly_succeeded . " unexpectedly succeeded; "
-        . $report->duration . "s.  "
-        . $self->{server_script} . "?id=" . $report->id;
-
-      $self->_say_to_all($msg);
-    } else {
-      if (! exists $self->{passing_projects}->{$report->project}) {
-        # don't announce if we've never seen this project before
-        $self->{passing_projects}->{$report->project} = 1;
-      }
-      if ( $self->{passing_projects}->{$report->project}++) {
-        my @exclam = (qw/Yatta Woo Whee Yay Yippee Yow/, "Happy happy joy joy", "O frabjous day");
-        if ($self->{passing_projects}->{$report->project} % 5 == 0) {
-            $self->_say_to_all(
-                    $report->project . " rev " 
-                  . $report->revision
-                  . (
-                      $report->can('committed_date')
-                    ? ( '(' . $report->committed_date  . ')' )
-                    : ''
-                  )
-                  . " still passing all "
-                  . $report->total_passed
-                  . " tests.  "
-                  . $exclam[ rand @exclam ] . "!"
-            );
-        }
-      } else {
-        $self->_say_to_all(
-                $report->project . " rev "
-              . $report->revision . " by "
-              . $report->committer
-              . (
-                $report->can('committed_date')
-                ? ( ' at ' . $report->committed_date )
-                : ''
-              )
-              . "; "
-              . $report->duration
-              . " seconds.  " . "All "
-              . $report->total_passed
-              . " tests pass"
-        );
-      }
+    if ( $self->{first_run} ) {
+        $self->_say_to_all("I'm going to ban so hard");
+        $self->{first_run} = 0;
     }
-  }
 
-  my $last = $reports->last;
-  if (defined $last) {
-    # we might already be at the highest oid
-    $self->{oid} = $last->id;
-  }
+    my $reports = Test::Chimps::ReportCollection->new( handle => $self->_handle );
+    $reports->limit( column => 'id', operator => '>', value => $self->_oid );
+    $reports->order_by( column => 'id' );
 
-  return 5;
+    while ( my $report = $reports->next ) {
+        if ( $report->total_failed || $report->total_unexpectedly_succeeded ) {
+            $self->{passing_projects}->{ $report->project } = 0;
+
+			my ($rev,$committer, $date) = $self->preprocess_report_metadata($report);
+
+            my $msg
+                = $report->project . " " 
+                . $rev . " by "
+                . $committer
+                . ( $date ? $date : '' ) . ": "
+                . sprintf( "%.2f", $report->total_ratio * 100 ) . "\%, "
+                . $report->total_seen
+                . " total, "
+                . $report->total_passed . " ok, "
+                . $report->total_failed
+                . " fail, "
+                . $report->total_todo
+                . " todo, "
+                . $report->total_skipped
+                . " skipped, "
+                . $report->total_unexpectedly_succeeded
+                . " unexpectedly ok; "
+                . $report->duration . "s.  "
+                . $self->{server_script} . "?id="
+                . $report->id;
+
+            $self->_say_to_all($msg);
+        } else {
+            if ( !exists $self->{passing_projects}->{ $report->project } ) {
+
+                # don't announce if we've never seen this project before
+                $self->{passing_projects}->{ $report->project } = 1;
+            }
+            if ( $self->{passing_projects}->{ $report->project }++ ) {
+                my @exclam = ( qw/Yatta Woo Whee Yay Yippee Yow/, "Happy happy joy joy", "O frabjous day" );
+
+
+				my ($rev,$committer, $date) = $self->preprocess_report_metadata($report);
+                if ( $self->{passing_projects}->{ $report->project } % 5 == 0 ) {
+                    $self->_say_to_all(
+                              $report->project . " rev " 
+                            . $rev,
+                            . (
+                            ? ( '(' . $date. ')' )
+                            : ''
+                            )
+                            . " still passing all "
+                            . $report->total_passed
+                            . " tests.  "
+                            . $exclam[ rand @exclam ] . "!"
+                    );
+                }
+            } else {
+				my ($rev,$committer, $date) = $self->preprocess_report_metadata($report);
+                $self->_say_to_all(
+                          $report->project . " rev " 
+                        . $rev . " by " 
+                        . $committer
+                        . (
+                        $report->can('committed_date')
+                        ? ( .' ' .$date )
+                        : ''
+                        )
+                        . "; "
+                        . $report->duration
+                        . "s.  " . "All "
+                        . $report->total_passed
+                        . " tests pass"
+                );
+            }
+        }
+    }
+
+    my $last = $reports->last;
+    if ( defined $last ) {
+
+        # we might already be at the highest oid
+        $self->{oid} = $last->id;
+    }
+
+    return 5;
 }
 
 sub _say_to_all {
@@ -236,6 +252,139 @@ sub _say_to_all {
         for (@{$self->{channels}});
   }
 }
+
+sub preprocess_report_metadata {
+	my $self = shift;
+	my $report = shift;
+            my $rev = substr( $report->revision, 0, 6 );
+            my $committer = $report->committer;
+            $committer =~ s/^(?:.*)<(.*)>(?:.*)/$1/g;
+            my $date;
+            if ( $report->can('committed_date') ) {
+                $dt   = $self->string_to_datetime( $report->committed_date );
+                $date = $self->age_as_string( time() - $dt->epoch );
+            }
+	return ($rev,$committer,$date);
+}
+
+
+
+my %MONTHS = ( jan => 1, feb => 2, mar => 3, apr => 4, may => 5, jun => 6, jul => 7, aug => 8, sep => 9, oct => 10, nov => 11, dec => 12);
+
+
+use vars qw($MINUTE $HOUR $DAY $WEEK $MONTH $YEAR);
+
+$MINUTE = 60;
+$HOUR   = 60 * $MINUTE;
+$DAY    = 24 * $HOUR;
+$WEEK   = 7 * $DAY;
+$MONTH  = 30.4375 * $DAY;
+$YEAR   = 365.25 * $DAY;
+
+sub string_to_datetime {
+	my $self = shift;
+    my ($date)= validate_pos(@_, { type => SCALAR | UNDEF} );
+    if ($date =~ /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2}):(\d{2})Z?$/ ){
+        my ($year,$month,$day, $hour,$min,$sec) = ($1,$2,$3,$4,$5,$6);
+        my $dt = DateTime->new( year => $year,
+                                month => $month,
+                                day => $day,
+                                hour => $hour,
+                                minute => $min,
+                                second => $sec,
+                                time_zone => 'GMT');
+        return $dt;
+    }
+    if ( $date =~ m!^(\d{4})/(\d{2})/(\d{2}) (\d{2}):(\d{2}):(\d{2}) ([-+]?\d{4})?! ) {
+        # e.g. 2009/03/21 10:03:05 -0700
+        my ( $year, $month, $day, $hour, $min, $sec, $tz ) =
+          ( $1, $2, $3, $4, $5, $6, $7 );
+        my $dt = DateTime->new(
+            year      => $year,
+            month     => $month,
+            day       => $day,
+            hour      => $hour,
+            minute    => $min,
+            second    => $sec,
+            time_zone => $tz || 'GMT'
+        );
+        $dt->set_time_zone( 'GMT' );
+        return $dt;
+    }
+ 
+	if ($date =~ /^(\w{3}) (\w{3}) (\d+) (\d\d):(\d\d):(\d\d) (\d{4}) ([+-]?\d{4})$/) {
+        my ( $wday, $mon, $day, $hour, $min, $sec, $year, $tz) = 
+          ( $1, $2, $3, $4, $5, $6, $7, $8 );
+        my $dt = DateTime->new(
+            year      => $year,
+            month     => $MONTHS{lc($mon)},
+            day       => $day,
+            hour      => $hour,
+            minute    => $min,
+            second    => $sec,
+            time_zone => $tz || 'GMT'
+        );
+        $dt->set_time_zone( 'GMT' );
+        return $dt;
+
+	}
+
+
+
+	if ($date) {
+        require DateTime::Format::Natural;
+        # XXX DO we want floating or GMT?
+        my $parser = DateTime::Format::Natural->new(time_zone => 'floating');
+        my $dt = $parser->parse_datetime($date);
+        if ($parser->success) {
+            return $dt;
+        } 
+    }
+
+    return undef;
+}
+
+
+
+sub age_as_string {
+    my $self     = shift;
+    my $duration = int shift;
+
+    my ( $s, $time_unit );
+
+    if ( $duration < $MINUTE ) {
+        $s         = $duration;
+        $time_unit = "sec";
+    }
+    elsif ( $duration < ( 2 * $HOUR ) ) {
+        $s         = int( $duration / $MINUTE + 0.5 );
+        $time_unit = "min";
+    }
+    elsif ( $duration < ( 2 * $DAY ) ) {
+        $s         = int( $duration / $HOUR + 0.5 );
+        $time_unit = "hours";
+    }
+    elsif ( $duration < ( 2 * $WEEK ) ) {
+        $s         = int( $duration / $DAY + 0.5 );
+        $time_unit = "days";
+    }
+    elsif ( $duration < ( 2 * $MONTH ) ) {
+        $s         = int( $duration / $WEEK + 0.5 );
+        $time_unit = "weeks";
+    }
+    elsif ( $duration < $YEAR ) {
+        $s         = int( $duration / $MONTH + 0.5 );
+        $time_unit = "months";
+    }
+    else {
+        $s         = int( $duration / $YEAR + 0.5 );
+        $time_unit = "years";
+    }
+
+    return  "$s $time_unit ago", $s, $time_unit );
+}
+
+
 
 =head1 AUTHOR
 

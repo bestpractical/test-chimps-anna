@@ -5,6 +5,8 @@ name            'Test-Chimps-Anna';
 all_from        'lib/Test/Chimps/Anna.pm';
 
 # Specific dependencies
+requires('Params::Validate');
+requires('DateTime');
 requires('Bot::BasicBot');
 requires('Jifty::DBI::Handle');
 requires('Test::Chimps::Report');
