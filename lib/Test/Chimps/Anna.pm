@@ -5,7 +5,7 @@ use strict;
 
 use Carp;
 use DateTime;
-use Params::Validate;
+use Params::Validate qw(:all);
 use Jifty::DBI::Handle;
 use Test::Chimps::Report;
 use Test::Chimps::ReportCollection;
