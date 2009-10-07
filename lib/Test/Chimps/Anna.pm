@@ -179,18 +179,8 @@ sub tick {
                 . $committer
                 . " "
                 . $date . ": "
-                . sprintf( "%.2f", $report->total_ratio * 100 ) . "\%, "
-                . $report->total_seen
-                . " total, "
-                . $report->total_passed . " ok, "
-                . $report->total_failed
-                . " fail, "
-                . $report->total_todo
-                . " todo, "
-                . $report->total_skipped
-                . " skipped, "
-                . $report->total_unexpectedly_succeeded
-                . " unexpectedly ok; "
+                . $self->pass_rate_for_report($report)
+
                 . $duration . ".  "
                 . $self->{server_script} . "?id="
                 . $report->id;
@@ -389,6 +379,22 @@ sub age_as_string {
 
     return "$s $time_unit ago";
 }
+
+
+sub pass_rate_for_report {
+    my $self   = shift;
+    my $report = shift;
+
+    return
+          sprintf( "%.2f", $report->total_ratio * 100 ) . "\%, "
+        . $report->total_passed . " of "
+        . $report->total_seen . " ok, "
+        . $report->total_failed . " fail, "
+        . ( $report->total_todo                   ? ( $report->total_todo . " todo, " )                          : '' )
+        . ( $report->total_skipped                ? ( $report->total_skipped . " skipped, " )                    : '' )
+        . ( $report->total_unexpectedly_succeeded ? $report->total_unexpectedly_succeeded . " unexpectedly ok; " : '' );
+}
+
 
 =head1 AUTHOR
 
